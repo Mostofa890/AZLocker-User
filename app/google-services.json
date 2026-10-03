@@ -1,0 +1,87 @@
+{
+  "project_info": {
+    "project_number": "25114300036",
+    "firebase_url": "https://tolaka-exc-reverb-b1afd-default-rtdb.firebaseio.com",
+    "project_id": "tolaka-exc-reverb-b1afd",
+    "storage_bucket": "tolaka-exc-reverb-b1afd.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:25114300036:android:579e5c869a075113603cd1",
+        "android_client_info": {
+          "package_name": "admin.catcoin.mkl"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqCNHhu9oaBDea85tAH-iHucHczZnR7nY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:25114300036:android:c005594899ea0768603cd1",
+        "android_client_info": {
+          "package_name": "com.dreamplan.notic"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqCNHhu9oaBDea85tAH-iHucHczZnR7nY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:25114300036:android:ac6c3ef75a6a662e603cd1",
+        "android_client_info": {
+          "package_name": "com.my.Refiner.Cash.User"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqCNHhu9oaBDea85tAH-iHucHczZnR7nY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:25114300036:android:23f9eb5a56acb848603cd1",
+        "android_client_info": {
+          "package_name": "khelofreefire.bangladesh.mk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqCNHhu9oaBDea85tAH-iHucHczZnR7nY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

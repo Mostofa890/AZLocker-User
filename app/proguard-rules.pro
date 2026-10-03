@@ -1,0 +1,7 @@
+-keep class com.my.Refiner.Cash.User.** { *; }
+-keep class com.google.firebase.** { *; }
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-dontwarn com.google.firebase.**
