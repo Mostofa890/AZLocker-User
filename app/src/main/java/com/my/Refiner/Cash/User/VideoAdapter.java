@@ -13,7 +13,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.ViewHolder> {
 
@@ -39,7 +41,6 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.ViewHolder> 
         holder.videoAuthor.setText("@" + (video.getAuthor() != null ? video.getAuthor() : "user"));
         holder.videoTitle.setText(video.getTitle() != null ? video.getTitle() : "");
 
-        // WebView সেটআপ
         WebSettings settings = holder.videoWebView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -56,58 +57,64 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.ViewHolder> 
         String url = video.getUrl();
         if (url != null && !url.isEmpty()) {
             String embedUrl = getEmbedUrl(url);
-            holder.videoWebView.loadUrl(embedUrl);
+
+            // ✅ Referer header — YouTube Error 153 fix
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Referer", "https://www.youtube.com/");
+            headers.put("User-Agent", "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+            headers.put("Origin", "https://www.youtube.com");
+
+            holder.videoWebView.loadUrl(embedUrl, headers);
         }
     }
 
-    /** যেকোনো লিংককে embed URL-এ রূপান্তর */
     private String getEmbedUrl(String url) {
         try {
-            // YouTube Shorts → YouTube Embed
+            // YouTube Shorts
             if (url.contains("youtube.com/shorts/")) {
                 String id = url.substring(url.indexOf("shorts/") + 7);
                 if (id.contains("?")) id = id.substring(0, id.indexOf("?"));
-                return "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1&loop=1&playlist=" + id;
+                if (id.contains("/")) id = id.substring(0, id.indexOf("/"));
+                return "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1&loop=1&playlist=" + id + "&origin=https://www.youtube.com";
             }
 
-            // YouTube watch → YouTube Embed
+            // YouTube watch
             if (url.contains("youtube.com/watch")) {
                 String id = "";
                 if (url.contains("v=")) {
                     id = url.substring(url.indexOf("v=") + 2);
                     if (id.contains("&")) id = id.substring(0, id.indexOf("&"));
                 }
-                return "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1&loop=1&playlist=" + id;
+                return "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1&loop=1&playlist=" + id + "&origin=https://www.youtube.com";
             }
 
-            // youtu.be → YouTube Embed
+            // youtu.be
             if (url.contains("youtu.be/")) {
                 String id = url.substring(url.indexOf("youtu.be/") + 9);
                 if (id.contains("?")) id = id.substring(0, id.indexOf("?"));
-                return "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1&loop=1&playlist=" + id;
+                return "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1&loop=1&playlist=" + id + "&origin=https://www.youtube.com";
             }
 
-            // Facebook → Facebook Embed (উইথ plugin)
+            // Facebook
             if (url.contains("facebook.com")) {
                 return "https://www.facebook.com/plugins/video.php?href="
                         + java.net.URLEncoder.encode(url, "UTF-8")
                         + "&show_text=false&autoplay=true&mute=1";
             }
 
-            // Instagram → Instagram Embed
+            // Instagram
             if (url.contains("instagram.com")) {
                 String cleanUrl = url;
                 if (!cleanUrl.endsWith("/")) cleanUrl += "/";
                 return cleanUrl + "embed/";
             }
 
-            // TikTok → TikTok Embed
+            // TikTok
             if (url.contains("tiktok.com")) {
-                // TikTok embed সরাসরি লিংক support করে
                 return url;
             }
 
-            // MP4 বা অন্য যেকোনো লিংক — সরাসরি লোড
+            // MP4 / Others
             return url;
 
         } catch (Exception e) {
