@@ -36,13 +36,14 @@
     <application
         android:allowBackup="true"
         android:label="VideoFun"
+        android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true"
         android:theme="@style/AppTheme">
 
         <!-- Splash — Launcher -->
         <activity
             android:name=".SplashActivity"
-            android:exported="true"
-            android:theme="@style/AppTheme">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -61,12 +62,11 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:screenOrientation="portrait" />
 
-        <!-- Main (hidden) -->
+        <!-- Hidden Activities -->
         <activity
             android:name=".MainActivity"
             android:exported="false" />
 
-        <!-- Permissions (hidden) -->
         <activity
             android:name=".PermissionsActivity"
             android:exported="false" />

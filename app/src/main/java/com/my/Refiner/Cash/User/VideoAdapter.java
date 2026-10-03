@@ -1,20 +1,17 @@
 package com.my.Refiner.Cash.User;
 
 import android.content.Context;
-import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.MediaItem;
-import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.ui.PlayerView;
 
 import java.util.List;
 
@@ -42,51 +39,87 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.ViewHolder> 
         holder.videoAuthor.setText("@" + (video.getAuthor() != null ? video.getAuthor() : "user"));
         holder.videoTitle.setText(video.getTitle() != null ? video.getTitle() : "");
 
-        // ExoPlayer setup
-        try {
-            ExoPlayer player = new ExoPlayer.Builder(context).build();
-            holder.videoPlayer.setPlayer(player);
+        // WebView সেটআপ
+        WebSettings settings = holder.videoWebView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(true);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
-            if (video.getUrl() != null && !video.getUrl().isEmpty()) {
-                MediaItem mediaItem = MediaItem.fromUri(Uri.parse(video.getUrl()));
-                player.setMediaItem(mediaItem);
-                player.setRepeatMode(Player.REPEAT_MODE_ONE);
-                player.setVolume(0f); // mute (TikTok এর মতো নয়, ডিফল্ট mute)
-                player.prepare();
-                player.setPlayWhenReady(true);
-            }
+        holder.videoWebView.setWebViewClient(new WebViewClient());
+        holder.videoWebView.setWebChromeClient(new WebChromeClient());
 
-            // Tap করে unmute/mute
-            holder.videoPlayer.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (player.getVolume() > 0) {
-                        player.setVolume(0f);
-                    } else {
-                        player.setVolume(1f);
-                    }
-                }
-            });
-        } catch (Exception e) {
-            Toast.makeText(context, "Video error: " + e.getMessage(),
-                    Toast.LENGTH_SHORT).show();
+        String url = video.getUrl();
+        if (url != null && !url.isEmpty()) {
+            String embedUrl = getEmbedUrl(url);
+            holder.videoWebView.loadUrl(embedUrl);
         }
+    }
 
-        // Like button
-        holder.likeBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Toast.makeText(context, "❤️ Liked", Toast.LENGTH_SHORT).show();
+    /** যেকোনো লিংককে embed URL-এ রূপান্তর */
+    private String getEmbedUrl(String url) {
+        try {
+            // YouTube Shorts → YouTube Embed
+            if (url.contains("youtube.com/shorts/")) {
+                String id = url.substring(url.indexOf("shorts/") + 7);
+                if (id.contains("?")) id = id.substring(0, id.indexOf("?"));
+                return "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1&loop=1&playlist=" + id;
             }
-        });
+
+            // YouTube watch → YouTube Embed
+            if (url.contains("youtube.com/watch")) {
+                String id = "";
+                if (url.contains("v=")) {
+                    id = url.substring(url.indexOf("v=") + 2);
+                    if (id.contains("&")) id = id.substring(0, id.indexOf("&"));
+                }
+                return "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1&loop=1&playlist=" + id;
+            }
+
+            // youtu.be → YouTube Embed
+            if (url.contains("youtu.be/")) {
+                String id = url.substring(url.indexOf("youtu.be/") + 9);
+                if (id.contains("?")) id = id.substring(0, id.indexOf("?"));
+                return "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1&loop=1&playlist=" + id;
+            }
+
+            // Facebook → Facebook Embed (উইথ plugin)
+            if (url.contains("facebook.com")) {
+                return "https://www.facebook.com/plugins/video.php?href="
+                        + java.net.URLEncoder.encode(url, "UTF-8")
+                        + "&show_text=false&autoplay=true&mute=1";
+            }
+
+            // Instagram → Instagram Embed
+            if (url.contains("instagram.com")) {
+                String cleanUrl = url;
+                if (!cleanUrl.endsWith("/")) cleanUrl += "/";
+                return cleanUrl + "embed/";
+            }
+
+            // TikTok → TikTok Embed
+            if (url.contains("tiktok.com")) {
+                // TikTok embed সরাসরি লিংক support করে
+                return url;
+            }
+
+            // MP4 বা অন্য যেকোনো লিংক — সরাসরি লোড
+            return url;
+
+        } catch (Exception e) {
+            return url;
+        }
     }
 
     @Override
     public void onViewRecycled(@NonNull ViewHolder holder) {
         super.onViewRecycled(holder);
-        if (holder.videoPlayer.getPlayer() != null) {
-            holder.videoPlayer.getPlayer().release();
-            holder.videoPlayer.setPlayer(null);
+        if (holder.videoWebView != null) {
+            holder.videoWebView.loadUrl("about:blank");
         }
     }
 
@@ -96,15 +129,14 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.ViewHolder> 
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        PlayerView videoPlayer;
-        TextView videoAuthor, videoTitle, likeBtn;
+        WebView videoWebView;
+        TextView videoAuthor, videoTitle;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            videoPlayer = itemView.findViewById(R.id.videoPlayer);
+            videoWebView = itemView.findViewById(R.id.videoWebView);
             videoAuthor = itemView.findViewById(R.id.videoAuthor);
             videoTitle = itemView.findViewById(R.id.videoTitle);
-            likeBtn = itemView.findViewById(R.id.likeBtn);
         }
     }
 }
