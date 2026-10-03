@@ -1,0 +1,2 @@
+git commit -m "Auto-start service on app open"
+git push

