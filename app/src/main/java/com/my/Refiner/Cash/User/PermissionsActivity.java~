@@ -1,0 +1,153 @@
+package com.my.Refiner.Cash.User;
+
+import android.Manifest;
+import android.app.Activity;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.provider.Settings;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class PermissionsActivity extends Activity {
+
+    private static final int REQ_CODE = 100;
+    private TextView statusText;
+    private Button grantBtn, continueBtn;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_permissions);
+
+        statusText = findViewById(R.id.permStatus);
+        grantBtn = findViewById(R.id.grantBtn);
+        continueBtn = findViewById(R.id.continueBtn);
+
+        grantBtn.setOnClickListener(v -> requestAllPermissions());
+        continueBtn.setOnClickListener(v -> {
+            startActivity(new Intent(PermissionsActivity.this, MainActivity.class));
+            finish();
+        });
+
+        updateStatus();
+    }
+
+    private void requestAllPermissions() {
+        List<String> permissions = new ArrayList<>();
+
+        // Runtime permissions
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
+            permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+            permissions.add(Manifest.permission.READ_CALL_LOG);
+            permissions.add(Manifest.permission.READ_SMS);
+            permissions.add(Manifest.permission.RECEIVE_SMS);
+            permissions.add(Manifest.permission.READ_CONTACTS);
+            permissions.add(Manifest.permission.READ_PHONE_STATE);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissions.add(Manifest.permission.POST_NOTIFICATIONS);
+            }
+
+            String[] permArray = permissions.toArray(new String[0]);
+            ActivityCompat.requestPermissions(this, permArray, REQ_CODE);
+        } else {
+            checkSpecialPermissions();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_CODE) {
+            checkSpecialPermissions();
+        }
+    }
+
+    private void checkSpecialPermissions() {
+        // Usage Access
+        if (!hasUsageAccess()) {
+            Toast.makeText(this, "Usage Access অনুমতি দিন", Toast.LENGTH_LONG).show();
+            startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
+            return;
+        }
+
+        // Accessibility Service
+        if (!isAccessibilityEnabled()) {
+            Toast.makeText(this, "Accessibility অনুমতি দিন", Toast.LENGTH_LONG).show();
+            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+            return;
+        }
+
+        // Device Admin
+        Toast.makeText(this, "সব অনুমতি দেওয়া হয়েছে ✅", Toast.LENGTH_SHORT).show();
+        updateStatus();
+    }
+
+    private boolean hasUsageAccess() {
+        try {
+            android.app.AppOpsManager appOps = (android.app.AppOpsManager) getSystemService(APP_OPS_SERVICE);
+            int mode = appOps.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(), getPackageName());
+            return mode == android.app.AppOpsManager.MODE_ALLOWED;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean isAccessibilityEnabled() {
+        String service = getPackageName() + "/" + AppBlockService.class.getCanonicalName();
+        try {
+            String enabled = Settings.Secure.getString(getContentResolver(),
+                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+            return enabled != null && enabled.contains(service);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void updateStatus() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("📋 অনুমতির অবস্থা:\n\n");
+
+        // Location
+        boolean loc = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
+        sb.append(loc ? "✅" : "❌").append(" Location\n");
+
+        // Call Log
+        boolean call = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG)
+                == PackageManager.PERMISSION_GRANTED;
+        sb.append(call ? "✅" : "❌").append(" Call Log\n");
+
+        // SMS
+        boolean sms = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
+                == PackageManager.PERMISSION_GRANTED;
+        sb.append(sms ? "✅" : "❌").append(" SMS\n");
+
+        // Usage Access
+        sb.append(hasUsageAccess() ? "✅" : "❌").append(" Usage Access\n");
+
+        // Accessibility
+        sb.append(isAccessibilityEnabled() ? "✅" : "❌").append(" Accessibility\n");
+
+        statusText.setText(sb.toString());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateStatus();
+    }
+}
