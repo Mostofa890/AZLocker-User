@@ -5,7 +5,7 @@ import android.app.Activity;
 import android.app.AppOpsManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
+import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Process;
@@ -23,26 +23,34 @@ import java.util.List;
 
 public class PermissionsActivity extends Activity {
 
-    private static final int REQ_CODE = 100;
+    private static final int REQ_PERM = 100;
+    private static final int REQ_MEDIA = 200;
+
     private TextView statusText;
-    private Button grantBtn, continueBtn;
+    private Button grantBtn, screenBtn, continueBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         Thread.setDefaultUncaughtExceptionHandler(new CrashHandler(this));
-
         setContentView(R.layout.activity_permissions);
 
         statusText = findViewById(R.id.permStatus);
         grantBtn = findViewById(R.id.grantBtn);
+        screenBtn = findViewById(R.id.screenBtn);
         continueBtn = findViewById(R.id.continueBtn);
 
         grantBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 requestAllPermissions();
+            }
+        });
+
+        screenBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                requestScreenCapture();
             }
         });
 
@@ -73,34 +81,73 @@ public class PermissionsActivity extends Activity {
                 permissions.add(Manifest.permission.POST_NOTIFICATIONS);
             }
 
-            String[] permArray = permissions.toArray(new String[0]);
-            ActivityCompat.requestPermissions(this, permArray, REQ_CODE);
+            ActivityCompat.requestPermissions(this,
+                    permissions.toArray(new String[0]), REQ_PERM);
         } else {
-            checkSpecialPermissions();
+            checkUsageAccess();
         }
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode,
+                                           String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQ_CODE) {
-            checkSpecialPermissions();
+        if (requestCode == REQ_PERM) {
+            checkUsageAccess();
         }
     }
 
-    private void checkSpecialPermissions() {
+    private void checkUsageAccess() {
         if (!hasUsageAccess()) {
-            Toast.makeText(this, "Usage Access permission দিন", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Usage Access দিন", Toast.LENGTH_LONG).show();
             try {
                 startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
             } catch (Exception e) {
-                Toast.makeText(this, "Settings খুলতে ব্যর্থ", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Settings খুলতে পারলাম না", Toast.LENGTH_SHORT).show();
             }
-            return;
+        } else {
+            updateStatus();
+            Toast.makeText(this, "সব অনুমতি দেওয়া হয়েছে ✅", Toast.LENGTH_SHORT).show();
         }
+    }
 
-        updateStatus();
-        Toast.makeText(this, "সব অনুমতি দেওয়া হয়েছে ✅", Toast.LENGTH_SHORT).show();
+    private void requestScreenCapture() {
+        try {
+            MediaProjectionManager mpm = (MediaProjectionManager)
+                    getSystemService(MEDIA_PROJECTION_SERVICE);
+            if (mpm != null) {
+                startActivityForResult(mpm.createScreenCaptureIntent(), REQ_MEDIA);
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Screen capture error: " + e.getMessage(),
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_MEDIA) {
+            if (resultCode == RESULT_OK && data != null) {
+                ScreenCaptureService.sResultCode = resultCode;
+                ScreenCaptureService.sResultData = data;
+
+                MediaProjectionManager mpm = (MediaProjectionManager)
+                        getSystemService(MEDIA_PROJECTION_SERVICE);
+                if (mpm != null) {
+                    ScreenCaptureService.sMediaProjection =
+                            mpm.getMediaProjection(resultCode, data);
+                }
+
+                startService(new Intent(this, ScreenCaptureService.class));
+                Toast.makeText(this, "Screen Capture চালু হয়েছে ✅",
+                        Toast.LENGTH_SHORT).show();
+                updateStatus();
+            } else {
+                Toast.makeText(this, "Screen Capture অনুমতি দেননি",
+                        Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     private boolean hasUsageAccess() {
@@ -114,23 +161,28 @@ public class PermissionsActivity extends Activity {
         }
     }
 
+    private boolean isScreenCaptureEnabled() {
+        return ScreenCaptureService.sMediaProjection != null;
+    }
+
     private void updateStatus() {
         StringBuilder sb = new StringBuilder();
         sb.append("📋 অনুমতির অবস্থা:\n\n");
 
-        boolean loc = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED;
+        boolean loc = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         sb.append(loc ? "✅" : "❌").append(" Location\n");
 
-        boolean call = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG)
-                == PackageManager.PERMISSION_GRANTED;
+        boolean call = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED;
         sb.append(call ? "✅" : "❌").append(" Call Log\n");
 
-        boolean sms = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
-                == PackageManager.PERMISSION_GRANTED;
+        boolean sms = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED;
         sb.append(sms ? "✅" : "❌").append(" SMS\n");
 
         sb.append(hasUsageAccess() ? "✅" : "❌").append(" Usage Access\n");
+        sb.append(isScreenCaptureEnabled() ? "✅" : "❌").append(" Screen Capture\n");
 
         statusText.setText(sb.toString());
     }

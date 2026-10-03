@@ -19,7 +19,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="অ্যাপ চালানোর জন্য নিচের অনুমতিগুলো দিন"
+        android:text="সব অনুমতি দিন"
         android:textColor="#94A3B8"
         android:textSize="14sp"
         android:gravity="center"
@@ -42,16 +42,25 @@
         android:id="@+id/grantBtn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="অনুমতি দিন"
+        android:text="১. অনুমতি দিন"
         android:padding="14dp"
         android:textSize="15sp"
         android:textStyle="bold" />
 
     <Button
+        android:id="@+id/screenBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="২. Screen Capture অনুমতি দিন"
+        android:padding="14dp"
+        android:layout_marginTop="12dp"
+        android:textSize="15sp" />
+
+    <Button
         android:id="@+id/continueBtn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="চালিয়ে যান"
+        android:text="৩. চালিয়ে যান"
         android:padding="14dp"
         android:layout_marginTop="12dp"
         android:textSize="15sp" />
