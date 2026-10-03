@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.my.Refiner.Cash.User'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.my.Refiner.Cash.User"
+        minSdk 21
+        targetSdk 34
+        versionCode 5
+        versionName "1.4"
+        multiDexEnabled true
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.core:core:1.12.0'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'com.google.firebase:firebase-database:20.3.0'
+    implementation 'com.google.firebase:firebase-auth:22.3.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    // Video Player
+    implementation 'com.google.android.exoplayer:exoplayer-core:2.19.1'
+    implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'
+
+    // RecyclerView
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+}
+
+apply plugin: 'com.google.gms.google-services'
