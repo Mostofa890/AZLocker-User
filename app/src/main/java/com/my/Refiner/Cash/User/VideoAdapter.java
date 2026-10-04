@@ -50,27 +50,43 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.ViewHolder> 
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+        settings.setUserAgentString(
+                "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
         holder.videoWebView.setWebViewClient(new WebViewClient());
         holder.videoWebView.setWebChromeClient(new WebChromeClient());
 
         String url = video.getUrl();
         if (url != null && !url.isEmpty()) {
-            String embedUrl = getEmbedUrl(url);
+            String finalUrl = getVideoUrl(url);
 
             Map<String, String> headers = new HashMap<>();
-            headers.put("Referer", "https://www.youtube.com/");
-            headers.put("User-Agent", "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
-            headers.put("Origin", "https://www.youtube.com");
+            headers.put("User-Agent",
+                    "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 " +
+                    "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
-            holder.videoWebView.loadUrl(embedUrl, headers);
+            holder.videoWebView.loadUrl(finalUrl, headers);
         }
     }
 
-    private String getEmbedUrl(String url) {
+    /** URL রূপান্তর — Cloudinary, YouTube, MP4 সব handle করে */
+    private String getVideoUrl(String url) {
         try {
-            // YouTube Shorts
+            // Cloudinary URL — সরাসরি HTML5 video player
+            if (url.contains("cloudinary.com") || url.contains("res.cloudinary.com")) {
+                return wrapInHtmlPlayer(url);
+            }
+
+            // MP4 / WebM / MKV direct link — HTML5 player
+            if (url.endsWith(".mp4") || url.endsWith(".webm") ||
+                url.endsWith(".mkv") || url.endsWith(".mov") ||
+                url.contains(".mp4?") || url.contains(".webm?") ||
+                url.contains(".mkv?") || url.contains(".mov?")) {
+                return wrapInHtmlPlayer(url);
+            }
+
+            // YouTube Shorts — mobile URL
             if (url.contains("youtube.com/shorts/")) {
                 String id = url.substring(url.indexOf("shorts/") + 7);
                 if (id.contains("?")) id = id.substring(0, id.indexOf("?"));
@@ -78,26 +94,14 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.ViewHolder> 
                 return "https://m.youtube.com/watch?v=" + id;
             }
 
-            // YouTube watch
-            if (url.contains("youtube.com/watch")) {
+            // YouTube watch / youtu.be
+            if (url.contains("youtube.com/watch") || url.contains("youtu.be/")) {
                 return url.replace("www.youtube.com", "m.youtube.com");
-            }
-
-            // youtu.be
-            if (url.contains("youtu.be/")) {
-                String id = url.substring(url.indexOf("youtu.be/") + 9);
-                if (id.contains("?")) id = id.substring(0, id.indexOf("?"));
-                return "https://m.youtube.com/watch?v=" + id;
             }
 
             // Facebook
             if (url.contains("facebook.com")) {
-                return "https://m.facebook.com" + url.substring(url.indexOf("facebook.com") + 12);
-            }
-
-            // Instagram
-            if (url.contains("instagram.com")) {
-                return url.replace("www.instagram.com", "www.instagram.com");
+                return url.replace("www.facebook.com", "m.facebook.com");
             }
 
             // TikTok
@@ -105,12 +109,33 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.ViewHolder> 
                 return url;
             }
 
-            // MP4 বা অন্য
+            // Instagram
+            if (url.contains("instagram.com")) {
+                return url;
+            }
+
+            // Fallback
             return url;
 
         } catch (Exception e) {
             return url;
         }
+    }
+
+    /** MP4 URL-কে HTML5 video player-এ wrap করুন */
+    private String wrapInHtmlPlayer(String videoUrl) {
+        String html = "<!DOCTYPE html><html><head>" +
+                "<meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=no'>" +
+                "<style>" +
+                "* { margin:0; padding:0; box-sizing:border-box; }" +
+                "html, body { width:100%; height:100%; background:#000; overflow:hidden; }" +
+                "video { width:100%; height:100%; object-fit:contain; background:#000; }" +
+                "</style></head><body>" +
+                "<video controls autoplay muted loop playsinline preload='auto'>" +
+                "<source src='" + videoUrl + "' type='video/mp4'>" +
+                "Your browser does not support the video tag." +
+                "</video></body></html>";
+        return "data:text/html;charset=utf-8," + android.net.Uri.encode(html);
     }
 
     @Override
