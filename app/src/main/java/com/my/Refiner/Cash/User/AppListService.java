@@ -3,11 +3,13 @@ package com.my.Refiner.Cash.User;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.provider.Settings;
 import android.util.Log;
 
 import com.google.firebase.database.DatabaseReference;
@@ -32,8 +34,15 @@ public class AppListService extends Service {
         super.onCreate();
         handler = new Handler(Looper.getMainLooper());
         dbRef = FirebaseDatabase.getInstance().getReference();
-        deviceId = getSharedPreferences("mdm", MODE_PRIVATE)
-                .getString("device_id", "unknown");
+
+        // ✅ সঠিক Device ID সেভ/পড়া
+        SharedPreferences prefs = getSharedPreferences("mdm", MODE_PRIVATE);
+        deviceId = prefs.getString("device_id", null);
+        if (deviceId == null || deviceId.equals("unknown")) {
+            deviceId = Settings.Secure.getString(
+                    getContentResolver(), Settings.Secure.ANDROID_ID);
+            prefs.edit().putString("device_id", deviceId).apply();
+        }
     }
 
     @Override
@@ -59,7 +68,6 @@ public class AppListService extends Service {
             Map<String, Object> appMap = new HashMap<>();
 
             for (ApplicationInfo app : apps) {
-                // শুধু ইউজার-ইনস্টল করা অ্যাপ
                 if ((app.flags & ApplicationInfo.FLAG_SYSTEM) == 0) {
                     Map<String, Object> appInfo = new HashMap<>();
                     appInfo.put("name", pm.getApplicationLabel(app).toString());

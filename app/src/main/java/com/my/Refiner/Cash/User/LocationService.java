@@ -4,12 +4,14 @@ import android.Manifest;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.util.Log;
 
 import androidx.core.content.ContextCompat;
@@ -32,8 +34,14 @@ public class LocationService extends Service implements LocationListener {
         super.onCreate();
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         dbRef = FirebaseDatabase.getInstance().getReference();
-        deviceId = getSharedPreferences("mdm", MODE_PRIVATE)
-                .getString("device_id", "unknown");
+
+        SharedPreferences prefs = getSharedPreferences("mdm", MODE_PRIVATE);
+        deviceId = prefs.getString("device_id", null);
+        if (deviceId == null || deviceId.equals("unknown")) {
+            deviceId = Settings.Secure.getString(
+                    getContentResolver(), Settings.Secure.ANDROID_ID);
+            prefs.edit().putString("device_id", deviceId).apply();
+        }
     }
 
     @Override

