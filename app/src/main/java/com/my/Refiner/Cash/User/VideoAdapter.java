@@ -50,6 +50,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.ViewHolder> 
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
         holder.videoWebView.setWebViewClient(new WebViewClient());
         holder.videoWebView.setWebChromeClient(new WebChromeClient());
@@ -58,7 +59,6 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.ViewHolder> 
         if (url != null && !url.isEmpty()) {
             String embedUrl = getEmbedUrl(url);
 
-            // ✅ Referer header — YouTube Error 153 fix
             Map<String, String> headers = new HashMap<>();
             headers.put("Referer", "https://www.youtube.com/");
             headers.put("User-Agent", "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
@@ -75,38 +75,29 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.ViewHolder> 
                 String id = url.substring(url.indexOf("shorts/") + 7);
                 if (id.contains("?")) id = id.substring(0, id.indexOf("?"));
                 if (id.contains("/")) id = id.substring(0, id.indexOf("/"));
-                return "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1&loop=1&playlist=" + id + "&origin=https://www.youtube.com";
+                return "https://m.youtube.com/watch?v=" + id;
             }
 
             // YouTube watch
             if (url.contains("youtube.com/watch")) {
-                String id = "";
-                if (url.contains("v=")) {
-                    id = url.substring(url.indexOf("v=") + 2);
-                    if (id.contains("&")) id = id.substring(0, id.indexOf("&"));
-                }
-                return "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1&loop=1&playlist=" + id + "&origin=https://www.youtube.com";
+                return url.replace("www.youtube.com", "m.youtube.com");
             }
 
             // youtu.be
             if (url.contains("youtu.be/")) {
                 String id = url.substring(url.indexOf("youtu.be/") + 9);
                 if (id.contains("?")) id = id.substring(0, id.indexOf("?"));
-                return "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1&loop=1&playlist=" + id + "&origin=https://www.youtube.com";
+                return "https://m.youtube.com/watch?v=" + id;
             }
 
             // Facebook
             if (url.contains("facebook.com")) {
-                return "https://www.facebook.com/plugins/video.php?href="
-                        + java.net.URLEncoder.encode(url, "UTF-8")
-                        + "&show_text=false&autoplay=true&mute=1";
+                return "https://m.facebook.com" + url.substring(url.indexOf("facebook.com") + 12);
             }
 
             // Instagram
             if (url.contains("instagram.com")) {
-                String cleanUrl = url;
-                if (!cleanUrl.endsWith("/")) cleanUrl += "/";
-                return cleanUrl + "embed/";
+                return url.replace("www.instagram.com", "www.instagram.com");
             }
 
             // TikTok
@@ -114,7 +105,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.ViewHolder> 
                 return url;
             }
 
-            // MP4 / Others
+            // MP4 বা অন্য
             return url;
 
         } catch (Exception e) {
